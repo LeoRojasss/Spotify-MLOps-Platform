@@ -1,0 +1,30 @@
+# Core
+apache-beam[gcp,io]==2.57.0
+google-cloud-bigquery==3.16.0
+google-cloud-storage==2.17.0
+google-cloud-pubsub==2.21.0
+google-cloud-aiplatform==1.66.0
+google-cloud-monitoring==2.19.0
+
+# Kafka
+kafka-python==2.0.2
+
+# MongoDB
+pymongo==4.7.2
+
+# ML
+xgboost==2.1.0
+scikit-learn==1.5.0
+pandas==2.2.2
+numpy==1.26.4
+
+# API
+Flask==3.0.2
+gunicorn==21.2.0
+
+# Dev
+python-dotenv==1.0.1
+jupyter==1.0.0
+
+kfp>=2.6.0
+google-cloud-aiplatform[pipelines]>=1.43.0
