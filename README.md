@@ -5,6 +5,7 @@
 ## **Integrantes**
 
 Andrés Leonardo Rojas Peña – alrojasp@eafit.edu.co
+
 Daniel Pineda Velez - Dpinedav@eafit.edu.co
 ## **Descripción del Caso de Negocio**
 
