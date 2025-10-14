@@ -1,0 +1,13 @@
+.env
+.env.development
+.env.production
+
+/data
+
+/spotify_mlops_consumer.egg-info
+
+/env
+
+spotify_pipeline.yaml
+
+/vertex_test
