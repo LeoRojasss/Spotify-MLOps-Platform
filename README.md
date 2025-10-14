@@ -5,7 +5,7 @@
 ## **Integrantes**
 
 Andrés Leonardo Rojas Peña – alrojasp@eafit.edu.co
-
+Daniel Pineda Velez - Dpinedav@eafit.edu.co
 ## **Descripción del Caso de Negocio**
 
 El presente caso de estudio tiene como objetivo **predecir el nivel de popularidad de una canción (Alta, Media o Baja)** en tiempo real, a partir del comportamiento de usuarios dentro de la plataforma Spotify.  
