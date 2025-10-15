@@ -11,6 +11,7 @@ Reproduce el proyecto de analítica en streaming con MLOps para predecir popular
 - Proyecto: `spotify-mlops-platform`
 - Habilitar APIs: Vertex AI, Dataflow, BigQuery, Cloud Storage, IAM
 - Rol recomendado: `Editor` o superior (o granular: Vertex AI Admin, Dataflow Developer, BigQuery Admin, Storage Admin)
+- Se recomienda crear un env de python para instalar dependencias
 
 ### 1.2. Herramientas locales
 - Python 3.10+
@@ -35,16 +36,17 @@ gcloud auth application-default login
 spotify-mlops-platform/
 ├─ dataflow/
 │  ├─ consumer.py               # Pipeline streaming Kafka → BigQuery/Mongo/GCS
-│  ├─ producer.py               # Generador de eventos simulados
-│  └─ requirements.txt
-├─ vertex/
-│  ├─ pipeline_train.py         # Entrenamiento y export del modelo (model.pkl)
-│  └─ pipeline_predict.py       # Llama endpoint y persiste en BigQuery
-├─ grafana/
-│  └─ dashboard.json            # Panel BigQuery (opcional)
-├─ sql/
-│  └─ create_tables.sql         # Esquema BigQuery
-└─ README_TECNICO.md            # Este archivo
+|  ├─ ingest_batch_historical.py
+├─ vertex_pipelines/
+│  ├─ mlops_pipeline.py
+├─ producers/
+|  ├─ producers.py
+├─ predictions/
+|  ├─ predictions.py   
+└─ README_TECNICO.md
+└─ README.md
+└─ docker-compose.yml
+└─ requirements.txt
 ```
 
 ---
@@ -162,7 +164,7 @@ Archivo: `dataflow/consumer.py`
 
 ### 5.1. Ejecución local (prueba)
 ```bash
-python dataflow/consumer.py --requirements_file dataflow/requirements.txt
+python dataflow/ingest_batch_historical.py
 ```
 
 ### 5.2. Ejecución en Dataflow (producción)
@@ -181,69 +183,22 @@ El pipeline debe:
 ## 6. Entrenamiento del modelo (Vertex AI)
 
 ### 6.1. Script de entrenamiento
-Archivo: `vertex/pipeline_train.py` debe exportar el artefacto en:
-```
-gs://spotify-mlops-platform-bucket/pipelines/<run_id>/model_output/model.pkl
-```
-Notas importantes:
-- Vertex AI espera exactamente `model.pkl` o `model.joblib` dentro de `model_output/`
-- Si el entrenamiento guarda en otra ruta, mover o ajustar `artifact_uri`
 
-### 6.2. Lanzar entrenamiento desde Python
-```python
-from google.cloud import aiplatform
+````bash
+python3 vertex_pipelines/mlops_pipeline.yml
+````
 
-aiplatform.init(project="spotify-mlops-platform", location="us-central1")
-
-job = aiplatform.CustomJob.from_local_script(
-    display_name="spotify-train",
-    script_path="vertex/pipeline_train.py",
-    staging_bucket="gs://spotify-mlops-platform-bucket/pipelines"
-)
-job.run()
-```
-
-### 6.3. Registrar y desplegar el modelo
-```python
-from google.cloud import aiplatform
-
-aiplatform.init(project="spotify-mlops-platform", location="us-central1")
-
-artifact_uri = "gs://spotify-mlops-platform-bucket/pipelines/<run_id>/model_output/"
-
-model = aiplatform.Model.upload(
-    display_name="spotify_popularity_model",
-    artifact_uri=artifact_uri,
-    serving_container_image_uri="us-docker.pkg.dev/vertex-ai/prediction/sklearn-cpu.1-0:latest"
-)
-endpoint = model.deploy(machine_type="n1-standard-2")
-print("Endpoint:", endpoint.resource_name)
-```
-
-Guardar el `endpoint.resource_name` para el paso de predicción.
-
----
+Con este Script se crean todos los pasos necesarios para el pipeline MLOps donde se preparan los datos, se entrena, evalua y despliega el modelo para poder ser utilizado.
+----
 
 ## 7. Predicciones automáticas (batch/stream → BigQuery)
-Archivo: `vertex/pipeline_predict.py`
+Archivo: `predictors/predictions.py`
 
 Objetivo:
-- Tomar registros recientes (o un stream buffer) con campos:
-  `hour_of_day, event_type_search_result, country_CO, country_ES, country_MX, country_US, track_id`
+- Tomar registros aleatorios con campos:
+  `hour_of_day, event_type_search_result, country_CO, country_ES, country_MX, country_US`
 - Llamar al endpoint de Vertex AI
 - Persistir en `spotify.spotify_predictions` con `popularity_level` y `model_version`
-
-Ejemplo de consulta origen (placeholder):
-```sql
-SELECT
-  TIMESTAMP_TRUNC(event_timestamp, MINUTE) AS prediction_timestamp,
-  hour_of_day,
-  event_type_search_result,
-  country_CO, country_ES, country_MX, country_US,
-  track_id
-FROM `spotify-mlops-platform.spotify.spotify_events`
-WHERE event_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 15 MINUTE);
-```
 
 ---
 
@@ -392,7 +347,6 @@ LIMIT 20;
 2. Crear bucket GCS y dataset BigQuery.
 3. Levantar Kafka y topic `spotify-events`.
 4. Ejecutar `dataflow/consumer.py` en Dataflow (streaming).
-5. Ejecutar entrenamiento `vertex/pipeline_train.py` y exportar `model.pkl` en `model_output/`.
-6. Registrar y desplegar el modelo; guardar `endpoint.resource_name`.
-7. Ejecutar `vertex/pipeline_predict.py`; verificar `spotify_predictions`.
-8. Conectar Grafana a BigQuery; importar/crear paneles.
+5. Ejecutar entrenamiento `vertex_pipelines/mlops_pipeline.py
+6. Ejecutar `predictions/predictions.py`; verificar `spotify_predictions`.
+7. Conectar Grafana a BigQuery; importar/crear paneles.
